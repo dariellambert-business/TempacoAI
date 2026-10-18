@@ -1,0 +1,9 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Serve existing files and directories directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route all other requests to index.html for client-side routing
+RewriteRule ^(.*)$ /index.html [L,QSA]
