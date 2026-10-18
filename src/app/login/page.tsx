@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -11,7 +11,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      window.location.href = "/";
+    }
+  }, [user, authLoading]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -30,8 +36,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   }
 
   async function handleGoogleLogin() {
@@ -39,16 +44,25 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: window.location.origin,
       },
     });
   }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={32} className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (user) return null;
 
   return (
     <div className="min-h-screen flex">
       {/* Left — Branding */}
       <div className="hidden lg:flex lg:w-[60%] relative bg-gradient-to-br from-[#0f0f1a] via-[#0a0a0a] to-[#0a0a1a] flex-col justify-between p-12">
-        {/* Subtle grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
@@ -59,7 +73,6 @@ export default function LoginPage() {
         />
 
         <div className="relative z-10">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center font-bold text-white text-lg">
               T
@@ -92,7 +105,6 @@ export default function LoginPage() {
       {/* Right — Login Form */}
       <div className="w-full lg:w-[40%] flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center font-bold text-white text-lg">
               T
