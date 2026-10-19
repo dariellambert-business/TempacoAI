@@ -36,15 +36,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function fetchProfile(userId: string) {
     const supabase = createClient();
+    console.log("[AuthProvider] Fetching profile for:", userId);
+    console.log("[AuthProvider] Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "NOT SET");
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
     if (error) {
-      console.error("Failed to fetch profile:", error);
+      console.error("[AuthProvider] Failed to fetch profile:", error.message, error.code, error.details);
     }
-    if (data) setProfile(data);
+    if (data) {
+      console.log("[AuthProvider] Profile loaded, role:", data.role);
+      setProfile(data);
+    }
   }
 
   useEffect(() => {
