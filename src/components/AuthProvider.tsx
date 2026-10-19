@@ -36,20 +36,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function fetchProfile(userId: string) {
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-    setProfile(data);
+    if (error) {
+      console.error("Failed to fetch profile:", error);
+    }
+    if (data) setProfile(data);
   }
 
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      setUser(user);
-      if (user) await fetchProfile(user.id);
+    // Try getSession first (works better with static export)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) await fetchProfile(u.id);
       setLoading(false);
     });
 

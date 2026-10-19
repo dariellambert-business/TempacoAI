@@ -115,7 +115,7 @@ export default function MessagesPage() {
                 className={`w-full text-left px-4 py-3 text-sm border-b border-card-border transition-colors ${
                   selectedProject === p.id
                     ? "bg-accent/10 text-accent"
-                    : "text-muted hover:text-white hover:bg-white/5"
+                    : "text-muted hover:text-foreground hover:bg-foreground/5"
                 }`}
               >
                 {p.name}
@@ -125,7 +125,7 @@ export default function MessagesPage() {
 
           {/* Mobile project select */}
           <select
-            className="md:hidden w-full mb-3 bg-card border border-card-border rounded-lg px-3 py-2 text-sm text-white"
+            className="md:hidden w-full mb-3 bg-card border border-card-border rounded-lg px-3 py-2 text-sm text-foreground"
             value={selectedProject ?? ""}
             onChange={(e) => setSelectedProject(e.target.value)}
           >
@@ -140,7 +140,7 @@ export default function MessagesPage() {
           <div className="flex-1 bg-card border border-card-border rounded-xl flex flex-col min-w-0">
             {/* Header */}
             <div className="px-5 py-3 border-b border-card-border">
-              <p className="text-sm font-semibold text-white">
+              <p className="text-sm font-semibold text-foreground">
                 {selectedProjectName}
               </p>
             </div>
@@ -164,7 +164,7 @@ export default function MessagesPage() {
                         className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
                           isMine
                             ? "bg-accent text-white rounded-br-md"
-                            : "bg-white/5 text-white rounded-bl-md"
+                            : "bg-foreground/5 text-foreground rounded-bl-md"
                         }`}
                       >
                         <p>{m.body}</p>
@@ -194,7 +194,7 @@ export default function MessagesPage() {
                 value={newMsg}
                 onChange={(e) => setNewMsg(e.target.value)}
                 placeholder="Ketik pesan..."
-                className="flex-1 bg-input-bg border border-input-border rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-muted focus:outline-none focus:border-accent"
+                className="flex-1 bg-input-bg border border-input-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent"
               />
               <button
                 type="submit"

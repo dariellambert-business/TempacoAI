@@ -71,7 +71,7 @@ export default function ClientsPage() {
                   {(c.full_name || "?").charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-white truncate">
+                  <p className="font-semibold text-foreground truncate">
                     {c.full_name || "Belum diisi"}
                   </p>
                   <p className="text-xs text-muted">

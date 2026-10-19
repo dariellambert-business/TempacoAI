@@ -77,7 +77,7 @@ export default function ProjectsPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-white truncate">
+                  <h3 className="font-semibold text-foreground truncate">
                     {p.name}
                   </h3>
                   {p.description && (

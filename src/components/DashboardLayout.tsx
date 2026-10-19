@@ -13,7 +13,10 @@ import {
   Menu,
   Users,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 import { useState } from "react";
 
 const clientNav = [
@@ -36,6 +39,7 @@ const adminNav = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, isAdmin, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -71,7 +75,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               T
             </div>
             {!collapsed && (
-              <span className="text-base font-semibold text-white truncate">
+              <span className="text-base font-semibold text-foreground truncate">
                 Tempa Co
               </span>
             )}
@@ -93,7 +97,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                     ${active
                       ? "bg-accent/10 text-accent"
-                      : "text-muted hover:text-white hover:bg-white/5"
+                      : "text-muted hover:text-foreground hover:bg-foreground/5"
                     }
                   `}
                 >
@@ -113,13 +117,28 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
               {!collapsed && (
                 <div className="min-w-0">
-                  <p className="text-sm text-white truncate">{displayName}</p>
+                  <p className="text-sm text-foreground truncate">{displayName}</p>
                   {isAdmin && (
                     <p className="text-[10px] text-accent font-medium">Admin</p>
                   )}
                 </div>
               )}
             </div>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted hover:text-foreground hover:bg-foreground/5 transition-colors"
+            >
+              {theme === "dark" ? (
+                <Sun size={18} className="shrink-0" />
+              ) : (
+                <Moon size={18} className="shrink-0" />
+              )}
+              {!collapsed && (
+                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+              )}
+            </button>
 
             {/* Sign out */}
             <button
@@ -133,7 +152,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             {/* Collapse toggle (desktop only) */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex items-center justify-center w-full py-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5 transition-colors"
+              className="hidden lg:flex items-center justify-center w-full py-1.5 rounded-lg text-muted hover:text-foreground hover:bg-foreground/5 transition-colors"
             >
               <ChevronLeft
                 size={18}
@@ -149,7 +168,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-card-border bg-card">
             <button
               onClick={() => setMobileOpen(true)}
-              className="text-muted hover:text-white"
+              className="text-muted hover:text-foreground"
             >
               <Menu size={22} />
             </button>

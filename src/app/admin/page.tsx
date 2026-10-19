@@ -130,7 +130,7 @@ export default function AdminPage() {
   }
 
   const inputClass =
-    "w-full bg-input-bg border border-input-border rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-muted focus:outline-none focus:border-accent";
+    "w-full bg-input-bg border border-input-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent";
   const labelClass = "block text-sm text-muted mb-1";
 
   return (
@@ -152,7 +152,7 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               tab === t.key
                 ? "bg-accent text-white"
-                : "text-muted hover:text-white"
+                : "text-muted hover:text-foreground"
             }`}
           >
             {t.label}
