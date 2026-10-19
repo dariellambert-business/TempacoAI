@@ -31,7 +31,13 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError("Email atau password salah");
+      if (error.status === 500) {
+        setError("Terjadi kesalahan server. Hubungi admin.");
+      } else if (error.status === 422) {
+        setError("Format email tidak valid.");
+      } else {
+        setError("Email atau password salah.");
+      }
       setLoading(false);
       return;
     }
