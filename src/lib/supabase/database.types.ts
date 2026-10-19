@@ -111,6 +111,63 @@ export type Database = {
         }
         Relationships: []
       }
+      project_files: {
+        Row: {
+          id: string
+          project_id: string
+          file_name: string
+          file_url: string
+          file_size: number
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          file_name: string
+          file_url: string
+          file_size?: number
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          file_name?: string
+          file_url?: string
+          file_size?: number
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      activity_log: {
+        Row: {
+          id: string
+          project_id: string
+          actor_id: string | null
+          action: string
+          details: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          actor_id?: string | null
+          action: string
+          details?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          actor_id?: string | null
+          action?: string
+          details?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           client_id: string
@@ -119,6 +176,7 @@ export type Database = {
           end_date: string | null
           id: string
           name: string
+          progress: number
           start_date: string | null
           status: string
           updated_at: string
@@ -130,6 +188,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           name: string
+          progress?: number
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -141,6 +200,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           name?: string
+          progress?: number
           start_date?: string | null
           status?: string
           updated_at?: string
