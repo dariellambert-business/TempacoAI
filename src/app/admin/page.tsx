@@ -10,13 +10,16 @@ import {
   X,
   Search,
   FolderOpen,
+  Inbox,
 } from "lucide-react";
 import { ProjectModal } from "@/components/ProjectModal";
+import { LeadModal } from "@/components/LeadModal";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-400/15 text-emerald-400 border-emerald-400/25",
@@ -32,15 +35,20 @@ const statusLabels: Record<string, string> = {
 
 export default function AdminPage() {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = useState("manage-projects");
+  const [tab, setTab] = useState("leads");
   const [clients, setClients] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Manage projects state
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  // Leads state
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadFilter, setLeadFilter] = useState("all");
 
   // Form states — project
   const [pName, setPName] = useState("");
@@ -72,16 +80,18 @@ export default function AdminPage() {
 
   async function loadData() {
     const supabase = createClient();
-    const [clientsRes, projectsRes] = await Promise.all([
+    const [clientsRes, projectsRes, leadsRes] = await Promise.all([
       supabase
         .from("profiles")
         .select("*")
         .eq("role", "client")
         .order("full_name"),
       supabase.from("projects").select("*").order("created_at", { ascending: false }),
+      supabase.from("leads").select("*").order("created_at", { ascending: false }),
     ]);
     setClients(clientsRes.data ?? []);
     setProjects(projectsRes.data ?? []);
+    setLeads(leadsRes.data ?? []);
     setLoading(false);
   }
 
@@ -190,6 +200,7 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-card border border-card-border rounded-lg p-1 w-fit">
         {[
+          { key: "leads", label: "Leads" },
           { key: "manage-projects", label: "Kelola Project" },
           { key: "new-project", label: "Project Baru" },
           { key: "new-invoice", label: "Invoice Baru" },
@@ -217,6 +228,105 @@ export default function AdminPage() {
         </div>
       ) : (
         <>
+          {/* Leads Tab */}
+          {tab === "leads" && (
+            <div>
+              {/* Filter */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <select
+                  value={leadFilter}
+                  onChange={(e) => setLeadFilter(e.target.value)}
+                  className={inputClass + " sm:w-44"}
+                >
+                  <option value="all">Semua Lead</option>
+                  <option value="new">Baru</option>
+                  <option value="contacted">Dihubungi</option>
+                  <option value="converted">Dikonversi</option>
+                  <option value="rejected">Ditolak</option>
+                </select>
+                <div className="text-sm text-muted flex items-center">
+                  {leads.filter((l) => l.status === "new").length} lead baru
+                </div>
+              </div>
+
+              {(() => {
+                const filtered = leads.filter(
+                  (l) => leadFilter === "all" || l.status === leadFilter
+                );
+                if (filtered.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-muted">
+                      <Inbox size={48} className="mb-3 opacity-40" />
+                      <p className="text-sm">
+                        {leads.length === 0
+                          ? "Belum ada lead masuk"
+                          : "Tidak ada lead yang cocok"}
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-3">
+                    {filtered.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => setSelectedLead(l)}
+                        className="w-full bg-card border border-card-border rounded-xl p-4 text-left hover:border-accent/40 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors">
+                              {l.nama}
+                            </h3>
+                            <p className="text-sm text-muted mt-0.5">
+                              {[l.jenis_website, l.bidang_usaha, l.kota]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                {
+                                  new: "bg-blue-400/15 text-blue-400 border-blue-400/25",
+                                  contacted: "bg-amber-400/15 text-amber-400 border-amber-400/25",
+                                  converted: "bg-emerald-400/15 text-emerald-400 border-emerald-400/25",
+                                  rejected: "bg-red-400/15 text-red-400 border-red-400/25",
+                                }[l.status] ?? "bg-gray-400/15 text-gray-400"
+                              }`}
+                            >
+                              {{ new: "Baru", contacted: "Dihubungi", converted: "Dikonversi", rejected: "Ditolak" }[l.status] ?? l.status}
+                            </span>
+                            <span className="text-xs text-muted">
+                              {new Date(l.created_at).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        {l.budget_tier && (
+                          <p className="text-xs text-muted mt-2">Budget: {l.budget_tier}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {selectedLead && (
+                <LeadModal
+                  lead={selectedLead}
+                  onClose={() => setSelectedLead(null)}
+                  onUpdated={() => {
+                    setSelectedLead(null);
+                    loadData();
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {/* Kelola Project Tab */}
           {tab === "manage-projects" && (
             <div>

@@ -168,6 +168,105 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          id: string
+          status: string
+          nama: string
+          kontak: string | null
+          whatsapp: string | null
+          kota: string | null
+          jenis_website: string | null
+          jenis_website_lainnya: string | null
+          bidang_usaha: string | null
+          deskripsi_bisnis: string | null
+          usp: string | null
+          tujuan_utama: string | null
+          halaman_section: string | null
+          fitur: string[] | null
+          kesiapan_konten: string | null
+          status_domain: string | null
+          status_hosting: string | null
+          mood_desain: string | null
+          warna_brand: string | null
+          status_logo: string | null
+          link_referensi: string | null
+          budget_tier: string | null
+          deadline: string | null
+          aset_urls: string[] | null
+          catatan: string | null
+          converted_to_client_id: string | null
+          converted_to_project_id: string | null
+          converted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          status?: string
+          nama: string
+          kontak?: string | null
+          whatsapp?: string | null
+          kota?: string | null
+          jenis_website?: string | null
+          jenis_website_lainnya?: string | null
+          bidang_usaha?: string | null
+          deskripsi_bisnis?: string | null
+          usp?: string | null
+          tujuan_utama?: string | null
+          halaman_section?: string | null
+          fitur?: string[] | null
+          kesiapan_konten?: string | null
+          status_domain?: string | null
+          status_hosting?: string | null
+          mood_desain?: string | null
+          warna_brand?: string | null
+          status_logo?: string | null
+          link_referensi?: string | null
+          budget_tier?: string | null
+          deadline?: string | null
+          aset_urls?: string[] | null
+          catatan?: string | null
+          converted_to_client_id?: string | null
+          converted_to_project_id?: string | null
+          converted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          status?: string
+          nama?: string
+          kontak?: string | null
+          whatsapp?: string | null
+          kota?: string | null
+          jenis_website?: string | null
+          jenis_website_lainnya?: string | null
+          bidang_usaha?: string | null
+          deskripsi_bisnis?: string | null
+          usp?: string | null
+          tujuan_utama?: string | null
+          halaman_section?: string | null
+          fitur?: string[] | null
+          kesiapan_konten?: string | null
+          status_domain?: string | null
+          status_hosting?: string | null
+          mood_desain?: string | null
+          warna_brand?: string | null
+          status_logo?: string | null
+          link_referensi?: string | null
+          budget_tier?: string | null
+          deadline?: string | null
+          aset_urls?: string[] | null
+          catatan?: string | null
+          converted_to_client_id?: string | null
+          converted_to_project_id?: string | null
+          converted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           client_id: string
