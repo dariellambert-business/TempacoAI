@@ -20,7 +20,7 @@ type Activity = {
   time: string;
 };
 
-function useDashboardData(userId: string | undefined | null) {
+function useDashboardData(userId: string | undefined | null, isAdmin: boolean) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,19 +31,26 @@ function useDashboardData(userId: string | undefined | null) {
     async function fetchData() {
       const supabase = createClient();
 
+      let projectsQ = supabase
+        .from("projects")
+        .select("id, name, status, created_at");
+      let invoicesQ = supabase
+        .from("invoices")
+        .select("id, invoice_number, amount, status, created_at");
+      const messagesQ = supabase
+        .from("messages")
+        .select("id, body, is_read, created_at, project_id")
+        .eq("is_read", false);
+
+      if (!isAdmin) {
+        projectsQ = projectsQ.eq("client_id", userId!);
+        invoicesQ = invoicesQ.eq("client_id", userId!);
+      }
+
       const [projectsRes, invoicesRes, messagesRes] = await Promise.all([
-        supabase
-          .from("projects")
-          .select("id, name, status, created_at")
-          .eq("client_id", userId!),
-        supabase
-          .from("invoices")
-          .select("id, invoice_number, amount, status, created_at")
-          .eq("client_id", userId!),
-        supabase
-          .from("messages")
-          .select("id, body, is_read, created_at, project_id")
-          .eq("is_read", false),
+        projectsQ,
+        invoicesQ,
+        messagesQ,
       ]);
 
       const projects = projectsRes.data ?? [];
@@ -122,9 +129,9 @@ function timeAgo(dateStr: string) {
 }
 
 export default function Home() {
-  const { user } = useAuth();
-  const { stats, activities, loading } = useDashboardData(user?.id);
-  const name = user?.email?.split("@")[0] ?? "";
+  const { user, profile, isAdmin } = useAuth();
+  const { stats, activities, loading } = useDashboardData(user?.id, isAdmin);
+  const name = profile?.full_name || user?.email?.split("@")[0] || "";
 
   return (
     <DashboardLayout>

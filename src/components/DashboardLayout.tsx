@@ -11,10 +11,12 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  Users,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 
-const navItems = [
+const clientNav = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Invoices", href: "/invoices", icon: FileText },
@@ -22,13 +24,26 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
+const adminNav = [
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Clients", href: "/admin/clients", icon: Users },
+  { label: "Projects", href: "/projects", icon: FolderKanban },
+  { label: "Invoices", href: "/invoices", icon: FileText },
+  { label: "Messages", href: "/messages", icon: MessageSquare },
+  { label: "Admin", href: "/admin", icon: ShieldCheck },
+  { label: "Settings", href: "/settings", icon: Settings },
+];
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "/";
+
+  const navItems = isAdmin ? adminNav : clientNav;
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "";
 
   return (
     <ProtectedRoute>
@@ -65,11 +80,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           {/* Nav */}
           <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
-              const active = currentPath === item.href;
+              const active =
+                item.href === "/"
+                  ? currentPath === "/"
+                  : currentPath.startsWith(item.href);
               return (
                 <a
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileOpen(false)}
                   className={`
                     flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                     ${active
@@ -90,12 +109,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             {/* User */}
             <div className="flex items-center gap-3 px-2 py-1">
               <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xs font-bold shrink-0">
-                {user?.email?.charAt(0).toUpperCase()}
+                {displayName.charAt(0).toUpperCase()}
               </div>
               {!collapsed && (
-                <span className="text-sm text-muted truncate">
-                  {user?.email}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-sm text-white truncate">{displayName}</p>
+                  {isAdmin && (
+                    <p className="text-[10px] text-accent font-medium">Admin</p>
+                  )}
+                </div>
               )}
             </div>
 
