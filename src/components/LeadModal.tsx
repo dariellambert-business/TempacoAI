@@ -65,33 +65,25 @@ export function LeadModal({ lead, onClose, onUpdated }: LeadModalProps) {
     const supabase = createClient();
 
     try {
-      // 1. Invite user via Supabase Auth (creates user + sends invite email)
-      // We use admin invite which requires service_role — for now we create profile directly
-      // and the client will set their password via invite link later
-
-      // For static export, we can't use admin API. Instead:
-      // Create a profile entry (client will be invited separately via Supabase dashboard or edge function)
-      // For MVP: create profile + project, mark lead as converted
-
-      // Generate a placeholder ID (in production, this would come from auth.admin.inviteUserByEmail)
-      const placeholderId = crypto.randomUUID();
-
-      // 2. Create client profile
-      const { data: newProfile, error: profileError } = await supabase
-        .from("profiles")
+      // 1. Create client record in standalone clients table
+      const { data: newClient, error: clientError } = await supabase
+        .from("clients")
         .insert({
-          id: placeholderId,
-          full_name: lead.nama,
-          phone: lead.whatsapp || "",
-          company: lead.bidang_usaha || "",
-          role: "client",
+          nama: lead.nama,
+          kontak: lead.kontak,
+          whatsapp: lead.whatsapp,
+          kota: lead.kota,
+          bidang_usaha: lead.bidang_usaha,
+          deskripsi_bisnis: lead.deskripsi_bisnis,
+          lead_id: lead.id,
+          status: "active",
         })
         .select()
         .single();
 
-      if (profileError) throw new Error(`Profile: ${profileError.message}`);
+      if (clientError) throw new Error(`Client: ${clientError.message}`);
 
-      // 3. Create project from lead data
+      // 2. Create project with all website spec fields from lead
       const projectName = lead.jenis_website
         ? `Website ${lead.jenis_website} — ${lead.nama}`
         : `Project — ${lead.nama}`;
@@ -99,12 +91,7 @@ export function LeadModal({ lead, onClose, onUpdated }: LeadModalProps) {
       const descParts = [
         lead.deskripsi_bisnis && `Bisnis: ${lead.deskripsi_bisnis}`,
         lead.usp && `USP: ${lead.usp}`,
-        lead.tujuan_utama && `Tujuan: ${lead.tujuan_utama}`,
-        lead.halaman_section && `Halaman: ${lead.halaman_section}`,
         lead.fitur?.length && `Fitur: ${lead.fitur.join(", ")}`,
-        lead.kesiapan_konten && `Konten: ${lead.kesiapan_konten}`,
-        lead.mood_desain && `Desain: ${lead.mood_desain}`,
-        lead.warna_brand && `Warna: ${lead.warna_brand}`,
         lead.catatan && `Catatan: ${lead.catatan}`,
       ].filter(Boolean);
 
@@ -113,17 +100,32 @@ export function LeadModal({ lead, onClose, onUpdated }: LeadModalProps) {
         .insert({
           name: projectName,
           description: descParts.join("\n"),
-          client_id: newProfile.id,
+          client_id: newClient.id,
           status: "active",
           start_date: new Date().toISOString().split("T")[0],
           end_date: lead.deadline || null,
+          lead_id: lead.id,
+          // Website spec fields
+          jenis_website: lead.jenis_website,
+          mood_desain: lead.mood_desain,
+          warna_brand: lead.warna_brand,
+          status_logo: lead.status_logo,
+          link_referensi: lead.link_referensi,
+          budget_tier: lead.budget_tier,
+          tujuan_utama: lead.tujuan_utama,
+          halaman_section: lead.halaman_section,
+          kesiapan_konten: lead.kesiapan_konten,
+          status_domain: lead.status_domain,
+          status_hosting: lead.status_hosting,
+          usp: lead.usp,
+          catatan: lead.catatan,
         })
         .select()
         .single();
 
       if (projectError) throw new Error(`Project: ${projectError.message}`);
 
-      // 4. Log activity
+      // 3. Log activity
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -134,12 +136,12 @@ export function LeadModal({ lead, onClose, onUpdated }: LeadModalProps) {
         details: `Project dibuat dari lead "${lead.nama}"`,
       });
 
-      // 5. Mark lead as converted
+      // 4. Mark lead as converted, pointing to new clients table
       await supabase
         .from("leads")
         .update({
           status: "converted",
-          converted_to_client_id: newProfile.id,
+          converted_to_client_id: newClient.id,
           converted_to_project_id: newProject.id,
           converted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

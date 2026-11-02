@@ -9,6 +9,132 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      clients: {
+        Row: {
+          id: string
+          nama: string
+          kontak: string | null
+          whatsapp: string | null
+          email: string | null
+          kota: string | null
+          bidang_usaha: string | null
+          deskripsi_bisnis: string | null
+          profile_id: string | null
+          lead_id: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nama: string
+          kontak?: string | null
+          whatsapp?: string | null
+          email?: string | null
+          kota?: string | null
+          bidang_usaha?: string | null
+          deskripsi_bisnis?: string | null
+          profile_id?: string | null
+          lead_id?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nama?: string
+          kontak?: string | null
+          whatsapp?: string | null
+          email?: string | null
+          kota?: string | null
+          bidang_usaha?: string | null
+          deskripsi_bisnis?: string | null
+          profile_id?: string | null
+          lead_id?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      edit_requests: {
+        Row: {
+          id: string
+          project_id: string
+          client_id: string
+          type: string
+          section: string | null
+          description: string
+          attachments: string[] | null
+          reference_url: string | null
+          priority: string
+          status: string
+          admin_notes: string | null
+          rejection_reason: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          client_id: string
+          type: string
+          section?: string | null
+          description: string
+          attachments?: string[] | null
+          reference_url?: string | null
+          priority?: string
+          status?: string
+          admin_notes?: string | null
+          rejection_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          client_id?: string
+          type?: string
+          section?: string | null
+          description?: string
+          attachments?: string[] | null
+          reference_url?: string | null
+          priority?: string
+          status?: string
+          admin_notes?: string | null
+          rejection_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      request_comments: {
+        Row: {
+          id: string
+          request_id: string
+          sender_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          sender_id: string
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          sender_id?: string
+          body?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -279,6 +405,22 @@ export type Database = {
           start_date: string | null
           status: string
           updated_at: string
+          jenis_website: string | null
+          template_mesin: string | null
+          mood_desain: string | null
+          warna_brand: string | null
+          status_logo: string | null
+          link_referensi: string | null
+          budget_tier: string | null
+          tujuan_utama: string | null
+          halaman_section: string | null
+          kesiapan_konten: string | null
+          status_domain: string | null
+          status_hosting: string | null
+          usp: string | null
+          catatan: string | null
+          site_url: string | null
+          lead_id: string | null
         }
         Insert: {
           client_id: string
@@ -291,6 +433,22 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
+          jenis_website?: string | null
+          template_mesin?: string | null
+          mood_desain?: string | null
+          warna_brand?: string | null
+          status_logo?: string | null
+          link_referensi?: string | null
+          budget_tier?: string | null
+          tujuan_utama?: string | null
+          halaman_section?: string | null
+          kesiapan_konten?: string | null
+          status_domain?: string | null
+          status_hosting?: string | null
+          usp?: string | null
+          catatan?: string | null
+          site_url?: string | null
+          lead_id?: string | null
         }
         Update: {
           client_id?: string
@@ -303,6 +461,22 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
+          jenis_website?: string | null
+          template_mesin?: string | null
+          mood_desain?: string | null
+          warna_brand?: string | null
+          status_logo?: string | null
+          link_referensi?: string | null
+          budget_tier?: string | null
+          tujuan_utama?: string | null
+          halaman_section?: string | null
+          kesiapan_konten?: string | null
+          status_domain?: string | null
+          status_hosting?: string | null
+          usp?: string | null
+          catatan?: string | null
+          site_url?: string | null
+          lead_id?: string | null
         }
         Relationships: []
       }

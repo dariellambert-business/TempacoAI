@@ -11,6 +11,11 @@ import {
   Search,
   FolderOpen,
   Inbox,
+  Users,
+  Globe,
+  Phone,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
 import { ProjectModal } from "@/components/ProjectModal";
 import { LeadModal } from "@/components/LeadModal";
@@ -20,6 +25,7 @@ type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
+type Client = Database["public"]["Tables"]["clients"]["Row"];
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-400/15 text-emerald-400 border-emerald-400/25",
@@ -36,7 +42,7 @@ const statusLabels: Record<string, string> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const [tab, setTab] = useState("leads");
-  const [clients, setClients] = useState<Profile[]>([]);
+  const [clientList, setClientList] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +55,10 @@ export default function AdminPage() {
   // Leads state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadFilter, setLeadFilter] = useState("all");
+
+  // Clients tab state
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientStatusFilter, setClientStatusFilter] = useState("all");
 
   // Form states — project
   const [pName, setPName] = useState("");
@@ -82,14 +92,13 @@ export default function AdminPage() {
     const supabase = createClient();
     const [clientsRes, projectsRes, leadsRes] = await Promise.all([
       supabase
-        .from("profiles")
+        .from("clients")
         .select("*")
-        .eq("role", "client")
-        .order("full_name"),
+        .order("nama"),
       supabase.from("projects").select("*").order("created_at", { ascending: false }),
       supabase.from("leads").select("*").order("created_at", { ascending: false }),
     ]);
-    setClients(clientsRes.data ?? []);
+    setClientList(clientsRes.data ?? []);
     setProjects(projectsRes.data ?? []);
     setLeads(leadsRes.data ?? []);
     setLoading(false);
@@ -186,7 +195,7 @@ export default function AdminPage() {
     const matchSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (clients.find((c) => c.id === p.client_id)?.full_name ?? "")
+      (clientList.find((c) => c.id === p.client_id)?.nama ?? "")
         .toLowerCase()
         .includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || p.status === filterStatus;
@@ -201,6 +210,8 @@ export default function AdminPage() {
       <div className="flex gap-1 mb-6 bg-card border border-card-border rounded-lg p-1 w-fit">
         {[
           { key: "leads", label: "Leads" },
+          { key: "clients", label: "Clients" },
+          { key: "projects", label: "Projects" },
           { key: "manage-projects", label: "Kelola Project" },
           { key: "new-project", label: "Project Baru" },
           { key: "new-invoice", label: "Invoice Baru" },
@@ -327,6 +338,236 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Clients Tab */}
+          {tab === "clients" && (
+            <div>
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Cari client..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className={inputClass + " pl-9"}
+                  />
+                </div>
+                <select
+                  value={clientStatusFilter}
+                  onChange={(e) => setClientStatusFilter(e.target.value)}
+                  className={inputClass + " sm:w-40"}
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                </select>
+                <div className="text-sm text-muted flex items-center">
+                  {clientList.length} client
+                </div>
+              </div>
+
+              {(() => {
+                const filtered = clientList.filter((c) => {
+                  const matchSearch = !clientSearch ||
+                    c.nama.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                    (c.bidang_usaha ?? "").toLowerCase().includes(clientSearch.toLowerCase()) ||
+                    (c.kota ?? "").toLowerCase().includes(clientSearch.toLowerCase());
+                  const matchStatus = clientStatusFilter === "all" || c.status === clientStatusFilter;
+                  return matchSearch && matchStatus;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-muted">
+                      <Users size={48} className="mb-3 opacity-40" />
+                      <p className="text-sm">
+                        {clientList.length === 0 ? "Belum ada client" : "Tidak ada client yang cocok"}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {filtered.map((c) => {
+                      const clientProjects = projects.filter((p) => p.client_id === c.id);
+                      return (
+                        <div
+                          key={c.id}
+                          className="bg-card border border-card-border rounded-xl p-5"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <h3 className="font-semibold text-foreground">{c.nama}</h3>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                              c.status === "active"
+                                ? "bg-emerald-400/15 text-emerald-400 border-emerald-400/25"
+                                : "bg-gray-400/15 text-gray-400 border-gray-400/25"
+                            }`}>
+                              {c.status === "active" ? "Aktif" : "Nonaktif"}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 text-sm text-muted mb-3">
+                            {c.bidang_usaha && (
+                              <p className="flex items-center gap-1.5">
+                                <Globe size={13} /> {c.bidang_usaha}
+                              </p>
+                            )}
+                            {c.kota && (
+                              <p className="flex items-center gap-1.5">
+                                <MapPin size={13} /> {c.kota}
+                              </p>
+                            )}
+                            {c.whatsapp && (
+                              <a
+                                href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-emerald-400 hover:underline"
+                              >
+                                <Phone size={13} /> {c.whatsapp}
+                              </a>
+                            )}
+                          </div>
+
+                          {clientProjects.length > 0 && (
+                            <div className="border-t border-card-border pt-3">
+                              <p className="text-xs text-muted mb-2">{clientProjects.length} project</p>
+                              <div className="space-y-1.5">
+                                {clientProjects.map((p) => (
+                                  <div key={p.id} className="flex items-center justify-between text-sm">
+                                    <span className="text-foreground truncate pr-2">{p.name}</span>
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border shrink-0 ${
+                                      statusColors[p.status] ?? "bg-gray-400/15 text-gray-400 border-gray-400/25"
+                                    }`}>
+                                      {statusLabels[p.status] ?? p.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-xs text-muted mt-3">
+                            Sejak {new Date(c.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Projects Tab (enriched view) */}
+          {tab === "projects" && (
+            <div>
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Cari project..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className={inputClass + " pl-9"}
+                  />
+                </div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={inputClass + " sm:w-40"}
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="on_hold">Ditunda</option>
+                  <option value="completed">Selesai</option>
+                </select>
+              </div>
+
+              {filteredProjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted">
+                  <FolderOpen size={48} className="mb-3 opacity-40" />
+                  <p className="text-sm">Tidak ada project</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredProjects.map((p) => {
+                    const client = clientList.find((c) => c.id === p.client_id);
+                    return (
+                      <div
+                        key={p.id}
+                        className="bg-card border border-card-border rounded-xl p-5"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{p.name}</h3>
+                            <p className="text-sm text-muted mt-0.5">
+                              {client?.nama || "—"}
+                              {client?.bidang_usaha ? ` · ${client.bidang_usaha}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                              statusColors[p.status] ?? "bg-gray-400/15 text-gray-400 border-gray-400/25"
+                            }`}>
+                              {statusLabels[p.status] ?? p.status}
+                            </span>
+                            {p.site_url && (
+                              <a href={p.site_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">
+                                <ExternalLink size={14} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progress */}
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-muted mb-1">
+                            <span>Progress</span>
+                            <span>{p.progress}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-foreground/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${p.progress}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Website specs grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                          {p.jenis_website && <SpecItem label="Jenis" value={p.jenis_website} />}
+                          {p.mood_desain && <SpecItem label="Mood" value={p.mood_desain} />}
+                          {p.warna_brand && <SpecItem label="Warna" value={p.warna_brand} />}
+                          {p.status_logo && <SpecItem label="Logo" value={p.status_logo} />}
+                          {p.budget_tier && <SpecItem label="Budget" value={p.budget_tier} />}
+                          {p.tujuan_utama && <SpecItem label="Tujuan" value={p.tujuan_utama} />}
+                          {p.halaman_section && <SpecItem label="Halaman" value={p.halaman_section} />}
+                          {p.kesiapan_konten && <SpecItem label="Konten" value={p.kesiapan_konten} />}
+                          {p.status_domain && <SpecItem label="Domain" value={p.status_domain} />}
+                          {p.status_hosting && <SpecItem label="Hosting" value={p.status_hosting} />}
+                        </div>
+
+                        {p.usp && (
+                          <p className="text-sm text-muted mt-3">
+                            <span className="text-xs text-muted/70">USP:</span> {p.usp}
+                          </p>
+                        )}
+
+                        {(p.start_date || p.end_date) && (
+                          <p className="text-xs text-muted mt-3">
+                            {p.start_date && new Date(p.start_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                            {p.start_date && p.end_date && " — "}
+                            {p.end_date && new Date(p.end_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Kelola Project Tab */}
           {tab === "manage-projects" && (
             <div>
@@ -370,7 +611,7 @@ export default function AdminPage() {
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {filteredProjects.map((p) => {
-                    const client = clients.find((c) => c.id === p.client_id);
+                    const client = clientList.find((c) => c.id === p.client_id);
                     return (
                       <button
                         key={p.id}
@@ -389,8 +630,8 @@ export default function AdminPage() {
                         </div>
 
                         <p className="text-sm text-muted mb-3">
-                          {client?.full_name || "Unknown client"}
-                          {client?.company ? ` — ${client.company}` : ""}
+                          {client?.nama || "Unknown client"}
+                          {client?.bidang_usaha ? ` — ${client.bidang_usaha}` : ""}
                         </p>
 
                         {/* Progress bar */}
@@ -433,7 +674,7 @@ export default function AdminPage() {
               {selectedProject && (
                 <ProjectModal
                   project={selectedProject}
-                  clients={clients}
+                  clients={clientList as unknown as Profile[]}
                   onClose={() => setSelectedProject(null)}
                   onSaved={() => {
                     setSelectedProject(null);
@@ -473,9 +714,9 @@ export default function AdminPage() {
                     required
                   >
                     <option value="">Pilih client...</option>
-                    {clients.map((c) => (
+                    {clientList.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.full_name || c.id} — {c.company || "No company"}
+                        {c.nama} — {c.bidang_usaha || "—"}
                       </option>
                     ))}
                   </select>
@@ -576,9 +817,9 @@ export default function AdminPage() {
                     required
                   >
                     <option value="">Pilih client...</option>
-                    {clients.map((c) => (
+                    {clientList.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.full_name || c.id} — {c.company || "No company"}
+                        {c.nama} — {c.bidang_usaha || "—"}
                       </option>
                     ))}
                   </select>
@@ -676,5 +917,14 @@ export default function AdminPage() {
         </>
       )}
     </DashboardLayout>
+  );
+}
+
+function SpecItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-xs text-muted">{label}</span>
+      <p className="text-foreground">{value}</p>
+    </div>
   );
 }
