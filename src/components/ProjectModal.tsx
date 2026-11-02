@@ -171,20 +171,10 @@ export function ProjectModal({
       await supabase.storage.from("project-files").remove(paths);
     }
 
-    // Unlink any leads that were converted to this project
-    const { error: unlinkError } = await supabase
-      .from("leads")
-      .update({ converted_to_project_id: null })
-      .eq("converted_to_project_id", project.id);
-
-    if (unlinkError) {
-      console.error("Failed to unlink leads:", unlinkError);
-    }
-
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", project.id);
+    // Use RPC function that handles unlinking leads + deleting project
+    const { error } = await supabase.rpc("delete_project" as any, {
+      p_id: project.id,
+    });
     setDeleting(false);
     if (error) {
       setError("Gagal menghapus project: " + error.message);
