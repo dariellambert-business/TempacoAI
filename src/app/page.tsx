@@ -31,33 +31,34 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
     if (!isAdmin && !clientId) return;
 
     async function fetchData() {
-      const supabase = createClient();
+      try {
+        const supabase = createClient();
 
-      let projectsQ = supabase
-        .from("projects")
-        .select("id, name, status, created_at");
-      let invoicesQ = supabase
-        .from("invoices")
-        .select("id, invoice_number, amount, status, created_at");
-      const messagesQ = supabase
-        .from("messages")
-        .select("id, body, is_read, created_at, project_id")
-        .eq("is_read", false);
+        let projectsQ = supabase
+          .from("projects")
+          .select("id, name, status, created_at");
+        let invoicesQ = supabase
+          .from("invoices")
+          .select("id, invoice_number, amount, status, created_at");
+        const messagesQ = supabase
+          .from("messages")
+          .select("id, body, is_read, created_at, project_id")
+          .eq("is_read", false);
 
-      if (!isAdmin && clientId) {
-        projectsQ = projectsQ.eq("client_id", clientId);
-        invoicesQ = invoicesQ.eq("client_id", clientId);
-      }
+        if (!isAdmin && clientId) {
+          projectsQ = projectsQ.eq("client_id", clientId);
+          invoicesQ = invoicesQ.eq("client_id", clientId);
+        }
 
-      const [projectsRes, invoicesRes, messagesRes] = await Promise.all([
-        projectsQ,
-        invoicesQ,
-        messagesQ,
-      ]);
+        const [projectsRes, invoicesRes, messagesRes] = await Promise.all([
+          projectsQ,
+          invoicesQ,
+          messagesQ,
+        ]);
 
-      const projects = projectsRes.data ?? [];
-      const invoices = invoicesRes.data ?? [];
-      const messages = messagesRes.data ?? [];
+        const projects = projectsRes.data ?? [];
+        const invoices = invoicesRes.data ?? [];
+        const messages = messagesRes.data ?? [];
 
       setStats({
         activeProjects: projects.filter((p) => p.status === "active").length,
@@ -97,11 +98,15 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
       );
 
       setActivities(recentActivities.slice(0, 8));
-      setLoading(false);
+      } catch {
+        // Queries failed — show empty state
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchData();
-  }, [userId, clientId]);
+  }, [userId, isAdmin, clientId]);
 
   return { stats, activities, loading };
 }
