@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loginMode, setLoginMode] = useState<"password" | "magic">("password");
+  const [magicSent, setMagicSent] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
@@ -43,6 +45,30 @@ export default function LoginPage() {
     }
 
     window.location.href = "/";
+  }
+
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setError("");
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setMagicSent(true);
+    setLoading(false);
   }
 
   async function handleGoogleLogin() {
@@ -121,73 +147,149 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-white mb-1">
             Masuk ke portal
           </h2>
-          <p className="text-muted text-sm mb-8">
-            Masukkan email dan password kamu
+          <p className="text-muted text-sm mb-6">
+            {loginMode === "password"
+              ? "Masukkan email dan password kamu"
+              : "Login tanpa password via email"}
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm text-muted mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@email.com"
-                required
-                className="w-full px-4 py-3 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#525252] focus:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm text-muted">Password</label>
-                <button
-                  type="button"
-                  className="text-xs text-accent hover:text-accent-hover transition-colors"
-                >
-                  Lupa password?
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#525252] focus:outline-none focus:border-accent transition-colors pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-red-400 text-sm bg-red-400/10 px-3 py-2 rounded-lg">
-                {error}
-              </p>
-            )}
-
+          {/* Mode toggle */}
+          <div className="flex gap-1 mb-6 bg-card border border-card-border rounded-lg p-1">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              type="button"
+              onClick={() => { setLoginMode("password"); setError(""); setMagicSent(false); }}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                loginMode === "password"
+                  ? "bg-accent text-white"
+                  : "text-muted hover:text-foreground"
+              }`}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                "Masuk"
-              )}
+              Password
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => { setLoginMode("magic"); setError(""); setMagicSent(false); }}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                loginMode === "magic"
+                  ? "bg-accent text-white"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Magic Link
+            </button>
+          </div>
+
+          {loginMode === "password" ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm text-muted mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nama@email.com"
+                  required
+                  className="w-full px-4 py-3 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#525252] focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm text-muted">Password</label>
+                  <button
+                    type="button"
+                    className="text-xs text-accent hover:text-accent-hover transition-colors"
+                  >
+                    Lupa password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="w-full px-4 py-3 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#525252] focus:outline-none focus:border-accent transition-colors pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-red-400 text-sm bg-red-400/10 px-3 py-2 rounded-lg">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Masuk"
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleMagicLink} className="space-y-4">
+              <div>
+                <label className="block text-sm text-muted mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nama@email.com"
+                  required
+                  className="w-full px-4 py-3 rounded-lg bg-input-bg border border-input-border text-white placeholder:text-[#525252] focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+
+              {error && (
+                <p className="text-red-400 text-sm bg-red-400/10 px-3 py-2 rounded-lg">
+                  {error}
+                </p>
+              )}
+
+              {magicSent ? (
+                <div className="bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-3 text-center">
+                  <p className="text-emerald-400 text-sm font-medium mb-1">
+                    Link login sudah dikirim!
+                  </p>
+                  <p className="text-muted text-xs">
+                    Cek inbox email <strong>{email}</strong> dan klik link untuk masuk.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Mengirim...
+                    </>
+                  ) : (
+                    "Kirim Magic Link"
+                  )}
+                </button>
+              )}
+            </form>
+          )}
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">

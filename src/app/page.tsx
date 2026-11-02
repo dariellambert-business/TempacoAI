@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/AuthProvider";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { useClientRecord } from "@/hooks/useClientRecord";
 import { createClient } from "@/lib/supabase/client";
 import { FolderKanban, FileText, MessageSquare, Clock, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,13 +21,14 @@ type Activity = {
   time: string;
 };
 
-function useDashboardData(userId: string | undefined | null, isAdmin: boolean) {
+function useDashboardData(userId: string | undefined | null, isAdmin: boolean, clientId: string | null) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
+    if (!isAdmin && !clientId) return;
 
     async function fetchData() {
       const supabase = createClient();
@@ -42,9 +44,9 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean) {
         .select("id, body, is_read, created_at, project_id")
         .eq("is_read", false);
 
-      if (!isAdmin) {
-        projectsQ = projectsQ.eq("client_id", userId!);
-        invoicesQ = invoicesQ.eq("client_id", userId!);
+      if (!isAdmin && clientId) {
+        projectsQ = projectsQ.eq("client_id", clientId);
+        invoicesQ = invoicesQ.eq("client_id", clientId);
       }
 
       const [projectsRes, invoicesRes, messagesRes] = await Promise.all([
@@ -99,7 +101,7 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean) {
     }
 
     fetchData();
-  }, [userId]);
+  }, [userId, clientId]);
 
   return { stats, activities, loading };
 }
@@ -130,7 +132,8 @@ function timeAgo(dateStr: string) {
 
 export default function Home() {
   const { user, profile, isAdmin } = useAuth();
-  const { stats, activities, loading } = useDashboardData(user?.id, isAdmin);
+  const { client } = useClientRecord(!isAdmin ? user?.id : null);
+  const { stats, activities, loading } = useDashboardData(user?.id, isAdmin, client?.id ?? null);
   const name = profile?.full_name || user?.email?.split("@")[0] || "";
 
   return (

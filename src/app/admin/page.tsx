@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ProjectModal } from "@/components/ProjectModal";
 import { LeadModal } from "@/components/LeadModal";
+import { AdminEditRequests } from "@/components/AdminEditRequests";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
@@ -212,6 +213,7 @@ export default function AdminPage() {
           { key: "leads", label: "Leads" },
           { key: "clients", label: "Clients" },
           { key: "projects", label: "Projects" },
+          { key: "edit-requests", label: "Edit Requests" },
           { key: "manage-projects", label: "Kelola Project" },
           { key: "new-project", label: "Project Baru" },
           { key: "new-invoice", label: "Invoice Baru" },
@@ -566,6 +568,11 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Edit Requests Tab */}
+          {tab === "edit-requests" && (
+            <AdminEditRequests />
           )}
 
           {/* Kelola Project Tab */}

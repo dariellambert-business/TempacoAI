@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  ClipboardEdit,
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import { useState } from "react";
 const clientNav = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
+  { label: "Edit Requests", href: "/edit-requests", icon: ClipboardEdit },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Messages", href: "/messages", icon: MessageSquare },
   { label: "Settings", href: "/settings", icon: Settings },
