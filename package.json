@@ -19,6 +19,9 @@
     "react-dom": "19.3.0",
     "tailwind-merge": "^3.7.0"
   },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
