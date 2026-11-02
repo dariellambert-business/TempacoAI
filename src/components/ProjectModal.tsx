@@ -60,6 +60,7 @@ export function ProjectModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState("");
 
   // Files
   const [files, setFiles] = useState<ProjectFile[]>([]);
@@ -170,12 +171,22 @@ export function ProjectModal({
       await supabase.storage.from("project-files").remove(paths);
     }
 
+    // Unlink any leads that were converted to this project
+    await supabase
+      .from("leads")
+      .update({ converted_to_project_id: null })
+      .eq("converted_to_project_id", project.id);
+
     const { error } = await supabase
       .from("projects")
       .delete()
       .eq("id", project.id);
     setDeleting(false);
-    if (!error) onDeleted();
+    if (error) {
+      setError("Gagal menghapus project: " + error.message);
+    } else {
+      onDeleted();
+    }
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -534,6 +545,9 @@ export function ProjectModal({
               </button>
             )}
           </div>
+          {error && (
+            <p className="text-red-400 text-sm">{error}</p>
+          )}
           <button
             onClick={handleSave}
             disabled={saving || !name}
