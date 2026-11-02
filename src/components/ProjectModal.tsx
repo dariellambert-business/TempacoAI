@@ -172,10 +172,14 @@ export function ProjectModal({
     }
 
     // Unlink any leads that were converted to this project
-    await supabase
+    const { error: unlinkError } = await supabase
       .from("leads")
       .update({ converted_to_project_id: null })
       .eq("converted_to_project_id", project.id);
+
+    if (unlinkError) {
+      console.error("Failed to unlink leads:", unlinkError);
+    }
 
     const { error } = await supabase
       .from("projects")
