@@ -172,7 +172,8 @@ export function ProjectModal({
     }
 
     // Use RPC function that handles unlinking leads + deleting project
-    const { error } = await supabase.rpc("delete_project" as any, {
+    // @ts-ignore - delete_project is a custom RPC function
+    const { error } = await supabase.rpc("delete_project", {
       p_id: project.id,
     });
     setDeleting(false);
