@@ -4,8 +4,24 @@ import { useAuth } from "@/components/AuthProvider";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useClientRecord } from "@/hooks/useClientRecord";
 import { createClient } from "@/lib/supabase/client";
-import { FolderKanban, FileText, MessageSquare, Clock, Loader2, TrendingUp } from "lucide-react";
+import {
+  FolderKanban,
+  FileText,
+  MessageSquare,
+  Clock,
+  Loader2,
+  TrendingUp,
+  Globe,
+  ExternalLink,
+  ClipboardEdit,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  Receipt,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+
+// ─── Types ────────────────────────────────────────────────────
 
 type Stats = {
   activeProjects: number;
@@ -32,6 +48,34 @@ type Activity = {
   text: string;
   time: string;
 };
+
+type ClientProject = {
+  id: string;
+  name: string;
+  status: string;
+  site_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  progress: number | null;
+};
+
+type ClientInvoice = {
+  id: string;
+  invoice_number: string;
+  amount: number;
+  status: string;
+  due_date: string | null;
+};
+
+type ClientEditRequest = {
+  id: string;
+  type: string;
+  status: string;
+  description: string;
+  created_at: string;
+};
+
+// ─── Helpers ──────────────────────────────────────────────────
 
 function getWeeklyBuckets(items: { created_at: string }[], weeks = 8): number[] {
   const now = Date.now();
@@ -63,6 +107,59 @@ function getMonthlyBuckets(items: { created_at: string; amount?: number }[], mon
   }
   return result;
 }
+
+function formatIDR(amount: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Baru saja";
+  if (mins < 60) return `${mins} menit lalu`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  const days = Math.floor(hours / 24);
+  return `${days} hari lalu`;
+}
+
+const projectStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  active: { label: "Dalam Pengerjaan", color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/20" },
+  on_hold: { label: "Ditunda", color: "text-amber-400", bg: "bg-amber-400/10 border-amber-400/20" },
+  completed: { label: "Live", color: "text-emerald-400", bg: "bg-emerald-400/10 border-emerald-400/20" },
+  cancelled: { label: "Dibatalkan", color: "text-gray-400", bg: "bg-gray-400/10 border-gray-400/20" },
+};
+
+const editTypeLabels: Record<string, string> = {
+  text: "Ubah Teks",
+  image: "Ganti Gambar",
+  content: "Tambah Konten",
+  remove: "Hapus Elemen",
+  layout: "Ubah Layout",
+  style: "Ubah Style",
+  bug: "Perbaiki Bug",
+  other: "Lainnya",
+};
+
+const editStatusLabels: Record<string, string> = {
+  pending: "Menunggu",
+  in_progress: "Dikerjakan",
+  completed: "Selesai",
+  rejected: "Ditolak",
+};
+
+const editStatusColors: Record<string, string> = {
+  pending: "bg-amber-400/10 text-amber-400",
+  in_progress: "bg-blue-400/10 text-blue-400",
+  completed: "bg-emerald-400/10 text-emerald-400",
+  rejected: "bg-red-400/10 text-red-400",
+};
+
+// ─── Admin Dashboard Data Hook ────────────────────────────────
 
 function useDashboardData(userId: string | undefined | null, isAdmin: boolean, clientId: string | null) {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -111,7 +208,6 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
           totalProjects: projects.length,
         });
 
-        // Chart data
         const projectsByStatus: Record<string, number> = {};
         projects.forEach((p) => {
           projectsByStatus[p.status] = (projectsByStatus[p.status] || 0) + 1;
@@ -139,9 +235,7 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
           },
         });
 
-        // Build recent activity
         const recentActivities: Activity[] = [];
-
         projects.slice(0, 5).forEach((p) => {
           recentActivities.push({
             id: p.id,
@@ -150,13 +244,8 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
             time: p.created_at,
           });
         });
-
         invoices.slice(0, 5).forEach((i) => {
-          const amount = new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            minimumFractionDigits: 0,
-          }).format(i.amount);
+          const amount = formatIDR(i.amount);
           recentActivities.push({
             id: i.id,
             type: "invoice",
@@ -164,11 +253,9 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
             time: i.created_at,
           });
         });
-
         recentActivities.sort(
           (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
         );
-
         setActivities(recentActivities.slice(0, 8));
       } catch {
         // Queries failed — show empty state
@@ -181,6 +268,56 @@ function useDashboardData(userId: string | undefined | null, isAdmin: boolean, c
   }, [userId, isAdmin, clientId]);
 
   return { stats, chartData, activities, loading };
+}
+
+// ─── Client Dashboard Data Hook ───────────────────────────────
+
+function useClientDashboard(clientId: string | null) {
+  const [projects, setProjects] = useState<ClientProject[]>([]);
+  const [invoices, setInvoices] = useState<ClientInvoice[]>([]);
+  const [editRequests, setEditRequests] = useState<ClientEditRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!clientId) return;
+
+    async function load() {
+      const supabase = createClient();
+
+      const [projRes, invRes, reqRes] = await Promise.all([
+        supabase
+          .from("projects")
+          .select("id, name, status, site_url, start_date, end_date, progress")
+          .eq("client_id", clientId!)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("invoices")
+          .select("id, invoice_number, amount, status, due_date")
+          .eq("client_id", clientId!)
+          .in("status", ["sent", "overdue"])
+          .order("due_date", { ascending: true })
+          .limit(5),
+        supabase
+          .from("edit_requests")
+          .select("id, type, status, description, created_at")
+          .eq("client_id", clientId!)
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+
+      // @ts-ignore - safe cast
+      setProjects((projRes.data as ClientProject[]) ?? []);
+      // @ts-ignore - safe cast
+      setInvoices((invRes.data as ClientInvoice[]) ?? []);
+      // @ts-ignore - safe cast
+      setEditRequests((reqRes.data as ClientEditRequest[]) ?? []);
+      setLoading(false);
+    }
+
+    load();
+  }, [clientId]);
+
+  return { projects, invoices, editRequests, loading };
 }
 
 // ─── SVG Components ────────────────────────────────────────────
@@ -248,7 +385,6 @@ function BarChart({ data, labelKey, valueKey, color = "#6366f1", height = 140 }:
   return (
     <div className="flex flex-col items-center">
       <svg width={totalWidth + 20} height={height + 30} className="overflow-visible">
-        {/* Grid lines */}
         {[0, 0.5, 1].map((frac) => (
           <line
             key={frac}
@@ -326,30 +462,261 @@ const activityIcons = {
   message: MessageSquare,
 };
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Baru saja";
-  if (mins < 60) return `${mins} menit lalu`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} jam lalu`;
-  const days = Math.floor(hours / 24);
-  return `${days} hari lalu`;
+// ─── Client Dashboard Component ───────────────────────────────
+
+function ClientDashboard({ name, clientId }: { name: string; clientId: string }) {
+  const { projects, invoices, editRequests, loading } = useClientDashboard(clientId);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 size={28} className="animate-spin text-muted" />
+      </div>
+    );
+  }
+
+  const activeProjects = projects.filter((p) => p.status === "active");
+  const completedProjects = projects.filter((p) => p.status === "completed");
+  const totalUnpaid = invoices.reduce((sum, i) => sum + i.amount, 0);
+
+  return (
+    <>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-1">Halo, {name} 👋</h1>
+        <p className="text-muted text-sm">
+          Berikut ringkasan project & tagihan kamu.
+        </p>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="bg-card border border-card-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="text-blue-400 bg-blue-400/10 p-1.5 rounded-lg">
+              <FolderKanban size={14} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold">{activeProjects.length}</p>
+          <p className="text-[11px] text-muted">Project Aktif</p>
+        </div>
+        <div className="bg-card border border-card-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="text-emerald-400 bg-emerald-400/10 p-1.5 rounded-lg">
+              <CheckCircle2 size={14} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold">{completedProjects.length}</p>
+          <p className="text-[11px] text-muted">Website Live</p>
+        </div>
+        <div className="bg-card border border-card-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="text-amber-400 bg-amber-400/10 p-1.5 rounded-lg">
+              <Receipt size={14} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold">{invoices.length}</p>
+          <p className="text-[11px] text-muted">Tagihan Pending</p>
+        </div>
+        <div className="bg-card border border-card-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="text-cyan-400 bg-cyan-400/10 p-1.5 rounded-lg">
+              <ClipboardEdit size={14} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold">
+            {editRequests.filter((r) => r.status !== "completed" && r.status !== "rejected").length}
+          </p>
+          <p className="text-[11px] text-muted">Request Aktif</p>
+        </div>
+      </div>
+
+      {/* Project cards */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Project Kamu</h2>
+          <a
+            href="/projects"
+            className="text-xs text-accent hover:underline flex items-center gap-1"
+          >
+            Lihat semua <ArrowRight size={12} />
+          </a>
+        </div>
+        {projects.length === 0 ? (
+          <div className="bg-card border border-card-border rounded-xl p-8 text-center text-muted">
+            <FolderKanban size={40} className="mx-auto mb-2 opacity-40" />
+            <p className="text-sm">Belum ada project</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {projects.map((p) => {
+              const cfg = projectStatusConfig[p.status] ?? projectStatusConfig.active;
+              const progress = p.progress ?? 0;
+              return (
+                <a
+                  key={p.id}
+                  href="/projects"
+                  className="bg-card border border-card-border rounded-xl p-5 hover:border-accent/30 transition-colors block"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="font-semibold text-foreground truncate">
+                      {p.name}
+                    </h3>
+                    <span
+                      className={`shrink-0 text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.color}`}
+                    >
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-[11px] text-muted mb-1">
+                      <span>Progress</span>
+                      <span className="font-medium">{progress}%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Website link */}
+                  {p.site_url && (
+                    <div
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(p.site_url!, "_blank");
+                      }}
+                      className="flex items-center gap-2 text-xs text-accent hover:underline cursor-pointer"
+                    >
+                      <Globe size={12} />
+                      <span className="truncate">{p.site_url.replace(/^https?:\/\//, "")}</span>
+                      <ExternalLink size={10} className="shrink-0" />
+                    </div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Pending invoices */}
+      {invoices.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Tagihan Belum Dibayar</h2>
+            <a
+              href="/invoices"
+              className="text-xs text-accent hover:underline flex items-center gap-1"
+            >
+              Lihat semua <ArrowRight size={12} />
+            </a>
+          </div>
+          <div className="bg-card border border-card-border rounded-xl divide-y divide-card-border">
+            {/* Total bar */}
+            <div className="px-5 py-3 flex items-center justify-between">
+              <span className="text-sm text-muted">Total belum dibayar</span>
+              <span className="text-lg font-bold text-foreground">
+                {formatIDR(totalUnpaid)}
+              </span>
+            </div>
+            {invoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="px-5 py-3 flex items-center justify-between gap-4"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {inv.invoice_number}
+                    </span>
+                    {inv.status === "overdue" && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-400/10 text-red-400 flex items-center gap-0.5">
+                        <AlertTriangle size={9} /> Jatuh Tempo
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold">{formatIDR(inv.amount)}</p>
+                  {inv.due_date && (
+                    <p className="text-[10px] text-muted">
+                      {new Date(inv.due_date).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent edit requests */}
+      {editRequests.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Request Terbaru</h2>
+            <a
+              href="/edit-requests"
+              className="text-xs text-accent hover:underline flex items-center gap-1"
+            >
+              Lihat semua <ArrowRight size={12} />
+            </a>
+          </div>
+          <div className="space-y-2">
+            {editRequests.map((r) => (
+              <div
+                key={r.id}
+                className="bg-card border border-card-border rounded-xl px-5 py-3 flex items-center gap-3"
+              >
+                <ClipboardEdit size={14} className="text-muted shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                      {editTypeLabels[r.type] ?? r.type}
+                    </span>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${editStatusColors[r.status] ?? "bg-white/10 text-muted"}`}
+                    >
+                      {editStatusLabels[r.status] ?? r.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground mt-0.5 truncate">
+                    {r.description}
+                  </p>
+                </div>
+                <span className="text-[10px] text-muted shrink-0">
+                  {timeAgo(r.created_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
-export default function Home() {
-  const { user, profile, isAdmin } = useAuth();
-  const { client } = useClientRecord(!isAdmin ? user?.id : null);
-  const { stats, chartData, activities, loading } = useDashboardData(user?.id, isAdmin, client?.id ?? null);
-  const name = profile?.full_name || user?.email?.split("@")[0] || "";
+// ─── Admin Dashboard Component ────────────────────────────────
+
+function AdminDashboard({ name, userId, clientId }: { name: string; userId: string; clientId: string | null }) {
+  const { stats, chartData, activities, loading } = useDashboardData(userId, true, clientId);
 
   const completedProjects = chartData?.projectsByStatus?.["completed"] ?? 0;
   const totalProjects = stats?.totalProjects ?? 0;
-  const paidInvoices = (chartData?.invoicesByStatus?.["paid"] ?? 0);
+  const paidInvoices = chartData?.invoicesByStatus?.["paid"] ?? 0;
   const totalInvoices = Object.values(chartData?.invoicesByStatus ?? {}).reduce((a, b) => a + b, 0);
 
   return (
-    <DashboardLayout>
+    <>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1">
@@ -390,9 +757,8 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Charts row: Progress rings + Bar chart */}
+      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* Progress Rings */}
         <div className="bg-card border border-card-border rounded-xl p-6">
           <h2 className="text-sm font-semibold mb-5 flex items-center gap-2">
             <TrendingUp size={14} className="text-accent" />
@@ -420,7 +786,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Monthly Bar Chart */}
         <div className="bg-card border border-card-border rounded-xl p-6 lg:col-span-2">
           <h2 className="text-sm font-semibold mb-5 flex items-center gap-2">
             <FolderKanban size={14} className="text-accent" />
@@ -490,6 +855,24 @@ export default function Home() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────
+
+export default function Home() {
+  const { user, profile, isAdmin } = useAuth();
+  const { client } = useClientRecord(!isAdmin ? user?.id : null);
+  const name = profile?.full_name || user?.email?.split("@")[0] || "";
+
+  return (
+    <DashboardLayout>
+      {isAdmin ? (
+        <AdminDashboard name={name} userId={user?.id ?? ""} clientId={client?.id ?? null} />
+      ) : (
+        <ClientDashboard name={name} clientId={client?.id ?? ""} />
+      )}
     </DashboardLayout>
   );
 }
